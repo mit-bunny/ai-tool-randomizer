@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { PlusIcon, XMarkIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
 
 function App() {
@@ -55,18 +55,18 @@ function App() {
     }
   ])
   
-  const [selectedTool, setSelectedTool] = useState(null)
+  const [selectedTool, setSelectedTool] = useState<any>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [flippedCards, setFlippedCards] = useState(new Set())
   const [newTool, setNewTool] = useState({ name: '', description: '', category: '', logo: '' })
   const [showAddForm, setShowAddForm] = useState(false)
-  const [uploadMode, setUploadMode] = useState('manual') // 'manual' or 'screenshot'
+  const [uploadMode, setUploadMode] = useState<string>('manual') // 'manual' or 'screenshot'
   const [screenshotFile, setScreenshotFile] = useState(null)
   const [isExtracting, setIsExtracting] = useState(false)
-  const [stars, setStars] = useState([])
+  const [stars, setStars] = useState<Array<{id: number, x: number, y: number, size: number, duration: number, delay: number}>>([])
   const [screenSize, setScreenSize] = useState({ width: window.innerWidth, height: window.innerHeight })
-  const [lightSweep, setLightSweep] = useState({ active: false, index: -1 })
-  const [selectedCardPosition, setSelectedCardPosition] = useState(null)
+  const [lightSweep, setLightSweep] = useState<{active: boolean, index: number}>({ active: false, index: -1 })
+  const [selectedCardPosition, setSelectedCardPosition] = useState<any>(null)
   const [isCardAnimating, setIsCardAnimating] = useState(false)
 
   useEffect(() => {
@@ -97,7 +97,7 @@ function App() {
     
     // Light sweep animation - visit 3-4 cards
     const visits = Math.min(4, tools.length)
-    const selectedIndices = []
+    const selectedIndices: number[] = []
     
     // Randomly select which cards to visit
     while (selectedIndices.length < visits) {
@@ -176,7 +176,7 @@ function App() {
     }, 2000)
   }
 
-  const handleScreenshotUpload = (event) => {
+  const handleScreenshotUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files[0]
     if (file) {
       setScreenshotFile(file)
@@ -184,7 +184,7 @@ function App() {
     }
   }
 
-  const toggleCardFlip = (id) => {
+  const toggleCardFlip = (id: number) => {
     setFlippedCards(prev => {
       const newSet = new Set(prev)
       if (newSet.has(id)) {
@@ -197,7 +197,7 @@ function App() {
   }
 
   // Calculate center position for selected card
-  const calculateCardPosition = (index) => {
+  const calculateCardPosition = (index: number) => {
     // Get card dimensions from the grid
     const cardWidth = 280
     const cardHeight = 380
@@ -239,7 +239,7 @@ function App() {
     <div className="h-screen max-h-screen bg-gray-950 text-white overflow-hidden relative w-full">
       {/* Animated Night Sky Background */}
       <div className="fixed inset-0 bg-gradient-to-b from-gray-900 via-gray-950 to-black">
-        {stars.map((star) => (
+        {stars.map((star: any) => (
           <div
             key={star.id}
             className="absolute animate-twinkle"
@@ -408,9 +408,9 @@ function App() {
             height: '100%',
             position: 'relative'
           }}>
-            {tools.map((tool, index) => {
+            {tools.map((tool: any, index: number) => {
               const isSelected = selectedCardPosition && selectedCardPosition.index === index
-              const position = isSelected ? calculateCardPosition(index) : null
+              const position = isSelected && calculateCardPosition ? calculateCardPosition(index) : null
               
               return (
               <div
