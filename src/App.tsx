@@ -196,18 +196,41 @@ function App() {
     })
   }
 
-  // Calculate center position for selected card
-  const calculateCardPosition = (index: number) => {
-    // Get card dimensions from the grid
-    const cardWidth = 280
-    const cardHeight = 380
+  // Calculate dynamic card size based on screen and number of tools
+  const calculateCardSize = () => {
+    const margin = 32 // px-8 padding
     const gap = 24 // gap-6 in Tailwind
     
-    // Calculate grid columns based on screen size
-    const cols = Math.max(1, Math.floor(screenSize.width / (cardWidth + gap)))
+    // Available space
+    const availableWidth = screenSize.width - (margin * 2)
+    const availableHeight = screenSize.height - 200 // Reserve space for header/buttons
     
-    const row = Math.floor(index / cols)
-    const col = index % cols
+    // Calculate optimal number of columns based on available space
+    let optimalCols = Math.max(1, Math.floor(availableWidth / 300)) // Minimum 300px per card
+    
+    // If we have fewer tools than available columns, use fewer columns
+    optimalCols = Math.min(optimalCols, tools.length, Math.ceil(Math.sqrt(tools.length)))
+    
+    // Calculate card width and height
+    const cardWidth = Math.floor((availableWidth - (optimalCols - 1) * gap) / optimalCols)
+    const cardHeight = Math.floor(cardWidth * 1.35) // 3:4 aspect ratio
+    
+    // If cards are too tall, reduce columns
+    if (cardHeight * Math.ceil(tools.length / optimalCols) > availableHeight) {
+      optimalCols = Math.max(1, optimalCols - 1)
+      return calculateCardSize() // Recalculate with new column count
+    }
+    
+    return { cardWidth, cardHeight, optimalCols }
+  }
+
+  // Calculate center position for selected card
+  const calculateCardPosition = (index: number) => {
+    const { cardWidth, cardHeight, optimalCols } = calculateCardSize()
+    const gap = 24 // gap-6 in Tailwind
+    
+    const row = Math.floor(index / optimalCols)
+    const col = index % optimalCols
     
     // Calculate current position (top-left corner of card)
     const currentX = col * (cardWidth + gap)
@@ -255,6 +278,33 @@ function App() {
             <div className="w-full h-full bg-white rounded-full opacity-60" />
           </div>
         ))}
+      </div>
+
+      {/* Header */}
+      <div className="relative z-20 flex items-center justify-between p-4 border-b border-gray-700/30 bg-gray-900/50 backdrop-blur-sm">
+        <h1 className="text-xl font-bold text-white">AI Tool Randomizer</h1>
+        
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="p-2 text-gray-400 hover:text-white transition-colors duration-200"
+            title="Add Tool"
+          >
+            <PlusIcon className="w-5 h-5" />
+          </button>
+          
+          <button
+            onClick={handleDraw}
+            disabled={isDrawing || tools.length === 0}
+            className={`px-6 py-2 rounded-xl transition-all duration-300 border text-sm ${
+              isDrawing || tools.length === 0 
+                ? 'bg-gray-600/20 border-gray-500/30 text-gray-500 cursor-not-allowed' 
+                : 'bg-blue-600/20 hover:bg-blue-600/30 border-blue-500/30 text-white'
+            } backdrop-blur-sm`}
+          >
+            {isDrawing ? 'Selecting...' : '✨ Draw Tool'}
+          </button>
+        </div>
       </div>
 
       {/* Add Tool Form */}
@@ -400,25 +450,28 @@ function App() {
       )}
 
       {/* Main Content */}
-      <div className="relative z-10 flex-1 w-full h-full flex items-center justify-center p-4">
+      <div className="relative z-10 flex-1 w-full h-full flex items-center justify-center p-4 pt-16">
         <div className="w-full h-full max-w-full max-h-full">
-          <div className="grid gap-6 justify-items-center items-center" style={{
-            gridTemplateColumns: `repeat(auto-fit, minmax(280px, 1fr))`,
-            maxWidth: '100%',
-            height: '100%',
-            position: 'relative'
-          }}>
+          <div 
+            className="grid gap-6 justify-items-center items-center w-full h-full"
+            style={{
+              gridTemplateColumns: `repeat(${calculateCardSize().optimalCols}, minmax(0, 1fr))`,
+              maxWidth: '100%',
+              height: '100%'
+            }}
+          >
             {tools.map((tool: any, index: number) => {
               const isSelected = selectedCardPosition && selectedCardPosition.index === index
-              const position = isSelected && calculateCardPosition ? calculateCardPosition(index) : null
+              const { cardWidth, cardHeight } = calculateCardSize()
+              const position = isSelected ? calculateCardPosition(index) : null
               
               return (
               <div
                 key={tool.id}
                 className="relative perspective-1000"
                 style={{
-                  width: '280px',
-                  height: '380px',
+                  width: `${cardWidth}px`,
+                  height: `${cardHeight}px`,
                   ...(isSelected ? {
                     transform: `translate(${position.translateX}px, ${position.translateY}px) scale(1.3)`,
                     zIndex: 50,
@@ -459,13 +512,13 @@ function App() {
                       )}
                       
                       <div className="relative z-10 h-full flex flex-col items-center justify-center text-center p-6">
-                        <div className={`mb-6 w-20 h-20 transition-all duration-300 ${
+                        <div className={`mb-6 transition-all duration-300 ${
                           lightSweep.active && lightSweep.index === index 
                             ? 'scale-110 drop-shadow-lg' 
                             : isSelected
                               ? 'scale-110 drop-shadow-lg'
                               : ''
-                        }`}>
+                        }`} style={{ width: `${Math.min(80, cardWidth * 0.25)}px`, height: `${Math.min(80, cardWidth * 0.25)}px` }}>
                           <img 
                             src={tool.logo} 
                             alt={tool.name}
@@ -476,13 +529,13 @@ function App() {
                           />
                         </div>
                         
-                        <h3 className={`font-bold text-lg transition-all duration-300 ${
+                        <h3 className={`font-bold transition-all duration-300 ${
                           lightSweep.active && lightSweep.index === index 
                             ? 'text-white drop-shadow-lg' 
                             : isSelected
                               ? 'text-gray-900'
                               : 'text-white'
-                        }`}>
+                        }`} style={{ fontSize: `${Math.min(18, cardWidth * 0.06)}px` }}>
                           {tool.name}
                         </h3>
                         
@@ -589,31 +642,6 @@ function App() {
               )
             })}
           </div>
-        </div>
-      </div>
-
-      {/* Bottom Controls */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40">
-        <div className="flex items-center space-x-4 bg-gray-900/20 backdrop-blur-sm border border-gray-700/30 rounded-2xl px-6 py-3">
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="p-2 text-gray-400 hover:text-white transition-colors duration-200"
-            title="Add Tool"
-          >
-            <PlusIcon className="w-5 h-5" />
-          </button>
-          
-          <button
-            onClick={handleDraw}
-            disabled={isDrawing || tools.length === 0}
-            className={`px-6 py-2 rounded-xl transition-all duration-300 border text-sm ${
-              isDrawing || tools.length === 0 
-                ? 'bg-gray-600/20 border-gray-500/30 text-gray-500 cursor-not-allowed' 
-                : 'bg-blue-600/20 hover:bg-blue-600/30 border-blue-500/30 text-white'
-            } backdrop-blur-sm`}
-          >
-            {isDrawing ? 'Selecting...' : '✨ Draw Tool'}
-          </button>
         </div>
       </div>
     </div>
